@@ -12,6 +12,9 @@ function initGame(websocket) {
     if (params.has("join")) {
       // Second player joins an existing game.
       event.join = params.get("join");
+    } else if (params.has("watch")) {
+      // Spectator watches an existing game.
+      event.watch = params.get("watch");
     } else {
       // First player starts a new game.
     }
@@ -40,9 +43,10 @@ function receiveMoves(board, websocket) {
         showMessage(event.message);
         break;
       case "init":
-    // Create link for inviting the second player.
-        document.querySelector(".join").href = "?join=" + event.join;
-        break;
+          // Create links for inviting the second player and spectators.
+          document.querySelector(".join").href = "?join=" + event.join;
+          document.querySelector(".watch").href = "?watch=" + event.watch;
+          break;
       default:
         throw new Error(`Unsupported event type: ${event.type}.`);
     }
@@ -50,6 +54,12 @@ function receiveMoves(board, websocket) {
 }
 
 function sendMoves(board, websocket) {
+  // Don't send moves for a spectator watching a game.
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("watch")) {
+    return;
+  }
+
   // When clicking a column, send a "play" event for a move in that column.
   board.addEventListener("click", ({ target }) => {
     const column = target.dataset.column;
@@ -68,7 +78,7 @@ function sendMoves(board, websocket) {
 function App() {
   useEffect(() => {
     const board = document.querySelector(".board");
-    loadBoard(board, websocket);
+    loadBoard(board);
     initGame(websocket);
     sendMoves(board, websocket);
     receiveMoves(board, websocket);
@@ -77,15 +87,21 @@ function App() {
     return () => window.removeEventListener("DOMContentLoaded", loadBoard);
   }, []);
 
-  const loadBoard = (board, websocket) => {
+  const loadBoard = (board) => {
     createBoard(board);
   };
 
   return (
     <>
       <div class="actions">
+        <a class="action new" href="/">
+          New
+        </a>
         <a class="action join" href="">
           Join
+        </a>
+        <a class="action watch" href="">
+          Watch
         </a>
       </div>
       <div className="board"></div>
